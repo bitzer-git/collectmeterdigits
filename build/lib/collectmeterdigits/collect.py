@@ -83,6 +83,7 @@ def ziffer_data_files(input_dir):
         for file in files:
             if (file.endswith(".jpg")):
                 imgfiles.append(root + "/" + file)
+                print('file found '+ file)
     return  imgfiles
 
 def remove_similar_images(image_filenames, hashfunc = imagehash.average_hash):
