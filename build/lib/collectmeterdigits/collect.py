@@ -79,11 +79,12 @@ def readimages(servername, output_dir, daysback=15):
 def ziffer_data_files(input_dir):
     '''return a list of all images in given input dir in all subdirectories'''
     imgfiles = []
+    print('input_dir2 '+ input_dir)
     for root, dirs, files in os.walk(input_dir):
         for file in files:
             if (file.endswith(".jpg")):
                 imgfiles.append(root + "/" + file)
-                print('file found '+ file)
+                print('file found2 '+ file)
     return  imgfiles
 
 def remove_similar_images(image_filenames, hashfunc = imagehash.average_hash):

@@ -79,6 +79,7 @@ def readimages(servername, output_dir, daysback=15):
 def ziffer_data_files(input_dir):
     '''return a list of all images in given input dir in all subdirectories'''
     imgfiles = []
+    print('input_dir1 '+ input_dir)
     for root, dirs, files in os.walk(input_dir):
         for file in files:
             if (file.endswith(".jpg")):
