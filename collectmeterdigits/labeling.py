@@ -6,6 +6,8 @@ import matplotlib.pyplot as plt
 import matplotlib.figure as fig
 from matplotlib.widgets import Slider, Button, RadioButtons
 import shutil
+import pandas as pd
+from collectmeterdigits.predict import predict
 
 def ziffer_data_files(input_dir):
     '''return a list of all images in given input dir in all subdirectories'''
@@ -19,7 +21,7 @@ def ziffer_data_files(input_dir):
     return  imgfiles
 
 
-def label(path, startlabel=0):
+def label(path, startlabel=0, imageurlsfile=None):
     global filename
     global i
     global im
@@ -27,17 +29,27 @@ def label(path, startlabel=0):
     global title
     global ax
     global slabel
+    global files
+    global predbox
 
     print(f"Startlabel", startlabel)
-    files = ziffer_data_files(path)
+
+    if (imageurlsfile!=None):
+        files = pd.read_csv(imageurlsfile, index_col=0).to_numpy().reshape(-1)
+
+        # remove files not exists
+        for file in files:
+            if (not os.path.exists(file)):
+              files = files[~np.isin(files, file)]
+    else:
+        files = ziffer_data_files(path)
 
     if (len(files)==0):
         print("No images found in path")
         exit(1)
         
     i = 0
-
-    img, filelabel, filename, i = load_image(files, i, startlabel)
+    img, img_2032, filelabel, filename, i = load_image(files, i, startlabel)
 
     # disable toolbar
     matplotlib.rcParams['toolbar'] = 'None'
@@ -50,7 +62,6 @@ def label(path, startlabel=0):
     plt.yticks(np.arange(0, 1, step=0.1))
     im = plt.imshow(img, aspect='1.6', extent=[0, 1, 0, 1])
     for y in np.arange(0.1, 0.91, 0.1):
-#        print(y)
         if (int(y*10)%2==0):
             color='yellow'   
         else:
@@ -61,10 +72,13 @@ def label(path, startlabel=0):
 
     plt.axvline(x=0.2, ymin=0.0, ymax=1, linewidth=3, color='red', linestyle=":")
     plt.axvline(x=0.8, ymin=0.0, ymax=1, linewidth=3, color='red', linestyle=":")
-       
+
+    plt.text(1.1, 0.9, "You can use cursor key controll also:\n\nleft/right = prev/next\nup/down=in/decrease value\ndelete=remove.", fontsize=6)
+    prediction = predict(img_2032)
+    plt.text(-0.6, 0.7, "Prediction:", fontsize=8)
+    predbox = plt.text(-0.6, 0.6, "{:.1f}".format(prediction), fontsize=24, bbox=dict(facecolor='none', edgecolor='black', boxstyle='round,pad=1'))
     ax=plt.gca()
     ax.get_xaxis().set_visible(False) 
-    #plt.tight_layout()
     axlabel = plt.axes([0.1, 0.025, 0.7, 0.04])
     slabel = Slider(axlabel, label='Label',valmin= 0.0, valmax=9.9, valstep=0.1, 
                     valinit=filelabel,
@@ -88,34 +102,38 @@ def label(path, startlabel=0):
         global i
         global filelabel
         global filename
-        
+        global predbox
+
         i = (i - 1) % len(files)
-        img, filelabel, filename, i = load_image(files, i)
+        img, img_2032, filelabel, filename, i = load_image(files, i)
         im.set_data(img)
         title.set_text(filelabel)
         slabel.set_val(filelabel)
         fig = plt.gcf()
         fig.canvas.manager.set_window_title(str(i) + ' of ' + str(len(files)) + ' images')
-
+        predbox.set_text("{:.1f}".format(predict(img_2032)))
         plt.draw()
 
 
-    def load_next():
+    def load_next(increaseindex = True):
         global im
         global title
         global slabel
         global i
         global filelabel
         global filename
-        
-        i = (i + 1) % len(files)
-        img, filelabel, filename, i = load_image(files, i)
+        global predbox
+
+        if increaseindex:
+            i = (i + 1) % len(files)
+        img, img_2032, filelabel, filename, i = load_image(files, i)
         im.set_data(img)
         title.set_text(filelabel)
         slabel.set_val(filelabel)
         fig = plt.gcf()
         fig.canvas.manager.set_window_title(str(i) + ' of ' + str(len(files)) + ' images')
-
+        predbox.set_text("{:.1f}".format(predict(img_2032)))
+        
         plt.draw()
 
     def increase_label(event):
@@ -126,8 +144,11 @@ def label(path, startlabel=0):
 
     def remove(event):
         global filename
+        global files
+        global i
         os.remove(filename)
-        load_next()
+        files = np.delete(files,i, 0)
+        load_next(False)
 
     def previous(event):
         load_previous()
@@ -143,6 +164,23 @@ def label(path, startlabel=0):
             files[i] = _zw
             shutil.move(filename, _zw)
         load_next()
+
+    def on_press(event):
+#        print('press', event.key)
+        if event.key == 'right':
+            next(event)
+        if event.key == 'left':
+            previous(event)
+        if event.key == 'up':
+            increase_label(event);
+        if event.key == 'down':
+            decrease_label(event)
+        if event.key == 'enter':
+            next(event)
+        if event.key == 'delete':
+            remove(event)
+
+    fig.canvas.mpl_connect('key_press_event', on_press)
     
     
     bnext.on_clicked(next)
@@ -166,13 +204,17 @@ def load_image(files, i, startlabel = -1):
             target = base[0:3]
         else:
             target = base[0:1]
-        category = float(target)
+        try:
+            category = float(target)
+        except ValueError:
+            category = 0.0
         if category >= startlabel:  
             break 
         else:
             i = (i + 1)
 
     filename = files[i]
-    test_image = Image.open(filename).resize((20, 32))
-    return test_image, category, filename, i
+    test_image = Image.open(filename)
+    test_image_resized = test_image.resize((20, 32), Image.NEAREST)
+    return test_image, test_image_resized, category, filename, i
     
