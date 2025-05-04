@@ -9,7 +9,8 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--collect',
                         help='collect all images. The edgeAI meter server name must be set')
-    parser.add_argument('--days', type=int, default=3, help='count of days back to read. (default: 3)')
+    parser.add_argument('--startdays', type=int, default=3, help='count of days back to start to read. (default: 0)')
+    parser.add_argument('--enddays', type=int, default=3, help='count of days back to read. (default: 3)')
     parser.add_argument('--labeling', default='', help='labelpath if you want label the images')
     parser.add_argument('--keepdownloads', action='store_true',
                         help='Normally all downloaded data will be deleted. If set it keeps the images.')
@@ -36,8 +37,8 @@ def main():
         if args.labelfile is not None:
             label(args.labeling, args.startlabel, args.labelfile)
         else:
-            collect(args.collect, args.days, keepolddata=args.keepdownloads, download=not args.nodownload,
-                    startlabel=args.startlabel)
+            collect(args.collect, args.startdays, args.enddays, keepolddata=args.keepdownloads, download=not args.nodownload,
+                    startlabel=args.startlabel, saveduplicates=args.saveduplicates)
     else:
         label(args.labeling, args.startlabel)
 

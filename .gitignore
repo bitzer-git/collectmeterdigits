@@ -5,3 +5,7 @@ README.md
 .code-workspace
 data/
 .DS_Store
+build/
+__pychache__/
+.idea
+dist/
