@@ -35,7 +35,7 @@ def readimages(servername, output_dir, daysstart=0, daysback=15):
     for datesbefore in range(daysstart, daysback):
         picturedate = yesterday(daysbefore=datesbefore)
         # only if not exists already
-        for i in range(2):
+        for i in range(24):
             hour = f'{i:02d}'
             if not os.path.exists(path = output_dir + "/" + servername + "/" + picturedate + "/" + hour):
                 try:
